@@ -49,6 +49,7 @@ def process_data(news_table, ticker):
 def fetch_and_process_price_data(ticker, min_date, max_date):
     try:
         price_data = yf.download(ticker, start=min_date, end=max_date)
+        price_data=price_data.asfreq('D').fillna(method='ffill')
         price_data.reset_index(inplace=True)
         # Rename columns
         price_data.rename(columns={'Date': 'date'}, inplace=True)
@@ -122,11 +123,11 @@ if st.button("Analyze"):
             data_frame = process_data(news_table, ticker)
             if not data_frame.empty:
                 data_frame['MarketReaction'] = data_frame.title.apply(lambda x: sia.polarity_scores(x)['compound'])
-                data_frame['date'] = data_frame['date'].apply(lambda x: pd.Timestamp.today().date() if x == 'Today' else x)
+                data_frame['date'] = data_frame['date'].drop(data_frame[data_frame['date']=='Today'].index)
                 data_frame.date = pd.to_datetime(data_frame.date,format="%b-%d-%y").dt.date
                 data_frame=data_frame.fillna(method='ffill')
                 min_date = data_frame.date.min()
-                max_date = data_frame.date.max()
+                max_date = pd.Timestamp.now().date()
                 price_data = fetch_and_process_price_data(ticker, min_date, max_date)
                 
                 if price_data is not None and not price_data.empty:
